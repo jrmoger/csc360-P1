@@ -1,10 +1,21 @@
+#include <string.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <signal.h>
+#include <errno.h>
+
 int main(){
 
 	while(1){	
 		cmd = readline("PMan: > ");
 		
-		/* parse the input cmd (e.g., with strtok)
-		 */
+		// parse the input cmd (e.g., with strtok)
+		 
 		
 		if (cmd_type == CMD_BG){
 			bg_entry(argv);
