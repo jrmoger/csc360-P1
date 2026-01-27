@@ -126,7 +126,7 @@ void func_BGkill(int argc, char* argv[]){
         // invalid pid
         return;
     }
-    // printf("pid: %d\n", (int)pid);
+
     if (PifExist(head, pid) == 0) {
         printf("pid does not exist\n");
     }
@@ -135,19 +135,53 @@ void func_BGkill(int argc, char* argv[]){
     if (val == 0) {
         head = deleteNode(head, pid);
         printf("successfully killed process %d\n", pid);
+    } else {
+        printf("%d error", val);
     }
 }
 
 
-void func_BGstop(char * str_pid){
-	//Your code here
-    printf("func_BGstop\n");
+void func_BGstop(int argc, char* argv[]){
+	if (argc != 2) {
+        printf("usage: bgstop <pid>");
+    }
+    pid_t pid = convert_pid(argv[1]);
+    if (pid < 0) {
+        // invalid pid
+        return;
+    }
+    if (PifExist(head, pid) == 0) {
+        printf("pid does not exist\n");
+    }
+    
+    int val = kill(pid, SIGSTOP);
+    if (val == 0) {
+        printf("successfully stopped process %d\n", pid);
+    } else {
+        printf("%d error", val);
+    }
 }
 
 
-void func_BGstart(char * str_pid){
-	//Your code here
-    printf("func_BGstart\n");
+void func_BGstart(int argc, char* argv[]){
+	if (argc != 2) {
+        printf("usage: bgstart <pid>");
+    }
+    pid_t pid = convert_pid(argv[1]);
+    if (pid < 0) {
+        // invalid pid
+        return;
+    }
+    if (PifExist(head, pid) == 0) {
+        printf("pid does not exist\n");
+    }
+    
+    int val = kill(pid, SIGCONT);
+    if (val == 0) {
+        printf("successfully started process %d\n", pid);
+    } else {
+        printf("%d error", val);
+    }
 }
 
 
@@ -174,10 +208,10 @@ int main(){
             func_BGlist(argc, argv);
         } else if (strcmp(argv[0], "bgkill") == 0) {
             func_BGkill(argc, argv);
-        // } else if (strcmp(argv[0], "bgstop") == 0) {
-        //     func_BGstop(argc, argv);
-        // } else if (strcmp(argv[0], "bgstart") == 0) {
-        //     func_BGstart(argc, argv);
+        } else if (strcmp(argv[0], "bgstop") == 0) {
+            func_BGstop(argc, argv);
+        } else if (strcmp(argv[0], "bgstart") == 0) {
+            func_BGstart(argc, argv);
         } else if (strcmp(argv[0], "pstat") == 0) {
             func_pstat(argc, argv);
         } else if (strcmp(argv[0], "q") == 0) {
@@ -187,8 +221,5 @@ int main(){
             printf("Invalid input\n");
         }
     }
-
-
-  return 0;
+    return 0;
 }
-
