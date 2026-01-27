@@ -19,18 +19,21 @@ static char *ll_strdup(const char *s) {
 	}
 	return p;
 }
- 
+
 Node * add_newNode(Node* head, pid_t new_pid, char * new_path){
+	// initialize a new node
 	Node *new_node = (Node *)malloc(sizeof(Node));
 	if (new_node == NULL) {
+		// insertion failed
 		return head;
 	}
 
 	new_node->pid = new_pid;
 	new_node->next = NULL;
 
+	// create copy of the path to store
 	if (new_path != NULL) {
-		new_node->path == ll_strdup(new_path);
+		new_node->path = strdup(new_path);
 		if (new_node->path == NULL) {
 			free(new_node);
 			return head;
@@ -38,6 +41,20 @@ Node * add_newNode(Node* head, pid_t new_pid, char * new_path){
 	} else {
 		new_node->path = NULL;
 	}
+
+	// if list is empty, make node head
+	if (head == NULL) {
+		return new_node;
+	}
+
+	// add new node to end
+	Node *cur = head;
+	while (cur->next != NULL) {
+		cur = cur->next;
+	}
+	cur->next = new_node;
+
+	return head;
 }
 
 Node * deleteNode(Node* head, pid_t pid){
@@ -45,7 +62,7 @@ Node * deleteNode(Node* head, pid_t pid){
 		return NULL;
 	}
 
-	//if head, remove it
+	// if head, remove it
 	if (head->pid == pid) {
 		Node *next = head->next;
 		free(head->path);
@@ -65,6 +82,7 @@ Node * deleteNode(Node* head, pid_t pid){
 		prev = cur;
 		cur = cur->next;
 	}
+
 	return head;
 }
 
@@ -74,12 +92,11 @@ void printList(Node *node){
 		if (cur->path != NULL) {
 			printf("%d\t%s\n", (int)cur->pid, cur->path);
 		} else {
-			printf("%d\t$s\n", (int)cur->pid, "(null)");
+			printf("%d\t%s\n", (int)cur->pid, "(null)");
 		}
 		cur = cur->next;
 	}
 }
-
 
 int PifExist(Node *node, pid_t pid){
 	Node *cur = node;
@@ -89,6 +106,5 @@ int PifExist(Node *node, pid_t pid){
 		}
 		cur = cur->next;
 	}
-  	return 0;
+	return 0;
 }
-

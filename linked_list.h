@@ -9,7 +9,6 @@ struct Node{
     Node * next;
 };
 
-
 Node * add_newNode(Node* head, pid_t new_pid, char * new_path);
 Node * deleteNode(Node* head, pid_t pid);
 void printList(struct Node *node);

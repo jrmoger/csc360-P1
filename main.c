@@ -1,21 +1,22 @@
-#include <string.h>
+#include <errno.h>
+#include <signal.h>
 #include <stdbool.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <signal.h>
-#include <errno.h>
+#include <unistd.h>
 #include "linked_list.h"
 
 #define MAXTOK 50
+#define PATH_MAX 100
 
 Node* head = NULL;
 
 int parse(char *line, char *argv[], int max) {
-    // parse terminal input
+    // parse terminal input as array of arguments
 
     int argc = 0;
     char *tok = strtok(line, " \t\n");
@@ -23,43 +24,81 @@ int parse(char *line, char *argv[], int max) {
         argv[argc++] = tok;
         tok = strtok(NULL, " \t\n");
     }
-    argv[argc] = NULL;   // argv must be NULL-terminated
+    argv[argc] = NULL;
     return argc;
 }
 
 void func_BG(int argc, char *argv[]){
     if (argc < 2) {
-        printf("usage: bg [process name]\n");
+        printf("usage: bg [process path]\n");
+        return;
     }
-    printf("argc: %d\nargv[0]: %s\nargv[1]: %s\n", argc, argv[0], argv[1]);
-    // printf("cmd: %s\n", path);
-    // if (access(path, F_OK) != 0) {
-    //     // file does not exist
-    //     printf("invalid program name\n");
-    //     return;
+
+    char path[PATH_MAX];
+    snprintf(path, sizeof(path), "./%s", argv[1]); // add ./ to start of path
+    printf("path: %s\n", path);
+    
+    //printf("argc: %d\nargv[0]: %s\nargv[1]: %s\n", argc, argv[0], argv[1]);
+    char* args[argc];
+    for (int i = 0; i < argc; i++) {
+        args[i] = NULL;
+    }
+    // copy argv minus bg
+    for (int i = 0; i < argc - 1; i++) {
+        args[i] = argv[i+1];
+        printf("args[%d]: %s\n", i, args[i]);
+    }
+
+
+    if (access(path, F_OK) != 0) {
+        // check if path is valid
+        printf("invalid program path\n");
+        return;
+    }
+
+    // if (realpath(path, args)) {
+    //     perror("realpath");
+    //     exit(1);
     // }
-    // pid_t pid = fork();
-    // if (pid == 0) {
-    //     execl(path, cmd[1], (char *)NULL);
-    // } else {
-    //     if (PifExist(head, pid)) {
-    //         head = add_newNode(head, pid, cmd[1]);
-    //     } else {
-    //         printf("pid %d already exists\n", (int)pid);
-    //     }
-    // }
+
+    pid_t pid = fork();
+    if (pid == 0) {
+        // exec program if fork is child
+
+        //char *args[]={argv[1], NULL};
+        //char path[PATH_MAX];
+        
+        //char *args[] = {argv[1], path, NULL};
+        execvp(path, args);
+        perror("execvp");
+        exit(1);
+    } else {
+        int status;
+        pid_t result = waitpid(pid, &status, WNOHANG); // check if child exists
+        if (result == 0) {
+            printf("pid child: %d\n", pid);
+            head = add_newNode(head, pid, argv[1]);
+        } else {
+            printf("no child\n");
+        }
+        // if (PifExist(head, pid)) {
+        //     head = add_newNode(head, pid, argv[1]);
+        // } else {
+        //     printf("pid %d already exists\n", (int)pid);
+        // }
+    }
+    
 }
 
 
-void func_BGlist(char **cmd){
-	//Your code here;
-    printf("func_BGlist\n");
+void func_BGlist(int argc, char* argv[]){
+    printf("printing list:\n");
+	printList(head);
 }
 
 
-void func_BGkill(char * str_pid){
-	//Your code here
-    printf("func_BGkill\n");
+void func_BGkill(int argc, char* argv[]){
+	
 }
 
 
@@ -75,7 +114,7 @@ void func_BGstart(char * str_pid){
 }
 
 
-void func_pstat(char * str_pid){
+void func_pstat(int argc, char* argv[]){
 	//Your code here
     printf("func_pstat\n");
     printList(head);
@@ -83,45 +122,7 @@ void func_pstat(char * str_pid){
 
  
 int main(){
-    // char user_input_str[50];
-    // while (1) {
-    //     printf("Pman: > ");
-    //     fgets(user_input_str, 50, stdin);
-    //     printf("User input: %s \n", user_input_str);
-    //     char * ptr = strtok(user_input_str, " \n");
-    //     if(ptr == NULL){
-    //         continue;
-    //     }
-    //     char * lst[50];
-    //     int index = 0;
-    //     lst[index] = ptr;
-    //     index++;
-    //     while(ptr != NULL){
-    //         ptr = strtok(NULL, " \n");
-    //         lst[index]=ptr;
-    //         index++;
-    //     }
-    //     if (strcmp("bg",lst[0]) == 0){
-    //         func_BG(lst);
-    //     } else if (strcmp("bglist",lst[0]) == 0) {
-    //         func_BGlist(lst);
-    //     } else if (strcmp("bgkill",lst[0]) == 0) {
-    //         func_BGkill(lst[1]);
-    //     } else if (strcmp("bgstop",lst[0]) == 0) {
-    //         func_BGstop(lst[1]);
-    //     } else if (strcmp("bgstart",lst[0]) == 0) {
-    //         func_BGstart(lst[1]);
-    //     } else if (strcmp("pstat",lst[0]) == 0) {
-    //         func_pstat(lst[1]);
-    //     } else if (strcmp("q",lst[0]) == 0) {
-    //         printf("Bye Bye \n");
-    //         exit(0);
-    //     } else {
-    //         printf("Invalid input\n");
-    //     }
-    // }
     char line[50];
-
     while (1) {
         printf("Pman: > ");
         if (!fgets(line, sizeof(line), stdin)) break;
@@ -132,10 +133,16 @@ int main(){
 
         if (strcmp(argv[0], "bg") == 0) {
             func_BG(argc, argv);
-        // } else if (strcmp(argv[0], "bglist") == 0) {
-        //     func_BGlist(argc, argv);
+        } else if (strcmp(argv[0], "bglist") == 0) {
+            func_BGlist(argc, argv);
         // } else if (strcmp(argv[0], "bgkill") == 0) {
         //     func_BGkill(argc, argv);
+        // } else if (strcmp(argv[0], "bgstop") == 0) {
+        //     func_BGstop(argc, argv);
+        // } else if (strcmp(argv[0], "bgstart") == 0) {
+        //     func_BGstart(argc, argv);
+        } else if (strcmp(argv[0], "pstat") == 0) {
+            func_pstat(argc, argv);
         } else if (strcmp(argv[0], "q") == 0) {
             printf("bye bye\n");
             exit(0);
