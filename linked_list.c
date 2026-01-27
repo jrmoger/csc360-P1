@@ -10,15 +10,15 @@
 #include <errno.h>
 #include "linked_list.h"
 
-static char *ll_strdup(const char *s) {
-	if (s == NULL) return NULL;
-	size_t n = strlen(s) + 1;
-	char *p = (char *)malloc(n);
-	if (p != NULL) {
-		memcpy(p, s, n);
-	}
-	return p;
-}
+// static char *ll_strdup(const char *s) {
+// 	if (s == NULL) return NULL;
+// 	size_t n = strlen(s) + 1;
+// 	char *p = (char *)malloc(n);
+// 	if (p != NULL) {
+// 		memcpy(p, s, n);
+// 	}
+// 	return p;
+// }
 
 Node * add_newNode(Node* head, pid_t new_pid, char * new_path){
 	// initialize a new node

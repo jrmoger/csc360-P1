@@ -28,6 +28,25 @@ int parse(char *line, char *argv[], int max) {
     return argc;
 }
 
+pid_t convert_pid(char* input) {
+    // converts string to pid
+    char *endptr;
+    errno = 0;
+    long x = strtol(input, &endptr, 10);
+    if (errno != 0) {
+        perror("strtol");
+        return -1;
+    }
+    if (endptr == input || *endptr != '\0') {
+        fprintf(stderr, "invalid pid: %s\n", input);
+        return -1;
+    }
+    if (x < 0) {
+        printf("invalid pid: %ld\n", x);
+    }
+    return (pid_t)x;
+}
+
 void func_BG(int argc, char *argv[]){
     if (argc < 2) {
         printf("usage: bg [process path]\n");
@@ -86,8 +105,7 @@ void func_BG(int argc, char *argv[]){
         // } else {
         //     printf("pid %d already exists\n", (int)pid);
         // }
-    }
-    
+    }    
 }
 
 
@@ -98,7 +116,26 @@ void func_BGlist(int argc, char* argv[]){
 
 
 void func_BGkill(int argc, char* argv[]){
-	
+    if (argc != 2) {
+        printf("usage: bgkill <pid>\n");
+        return;
+    }
+
+    pid_t pid = convert_pid(argv[1]);
+    if (pid < 0) {
+        // invalid pid
+        return;
+    }
+    // printf("pid: %d\n", (int)pid);
+    if (PifExist(head, pid) == 0) {
+        printf("pid does not exist\n");
+    }
+
+    int val = kill(pid, SIGTERM);
+    if (val == 0) {
+        head = deleteNode(head, pid);
+        printf("successfully killed process %d\n", pid);
+    }
 }
 
 
@@ -135,8 +172,8 @@ int main(){
             func_BG(argc, argv);
         } else if (strcmp(argv[0], "bglist") == 0) {
             func_BGlist(argc, argv);
-        // } else if (strcmp(argv[0], "bgkill") == 0) {
-        //     func_BGkill(argc, argv);
+        } else if (strcmp(argv[0], "bgkill") == 0) {
+            func_BGkill(argc, argv);
         // } else if (strcmp(argv[0], "bgstop") == 0) {
         //     func_BGstop(argc, argv);
         // } else if (strcmp(argv[0], "bgstart") == 0) {
