@@ -89,13 +89,19 @@ Node * deleteNode(Node* head, pid_t pid){
 void printList(Node *node){
 	Node *cur = node;
 	while (cur != NULL) {
-		if (cur->path != NULL) {
-			printf("%d\t%s\n", (int)cur->pid, cur->path);
-		} else {
-			printf("%d\t%s\n", (int)cur->pid, "(null)");
-		}
+		printf("%d:\t\t%s\n", (int)cur->pid, cur->path);
 		cur = cur->next;
 	}
+}
+
+int listSize(Node *node) {
+	Node *cur = node;
+	int count = 0;
+	while (cur != NULL) {
+		count++;
+		cur = cur->next;
+	}
+	return count;
 }
 
 int PifExist(Node *node, pid_t pid){

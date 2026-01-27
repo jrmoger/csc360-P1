@@ -30,6 +30,7 @@ int parse(char *line, char *argv[], int max) {
 
 pid_t convert_pid(char* input) {
     // converts string to pid
+
     char *endptr;
     errno = 0;
     long x = strtol(input, &endptr, 10);
@@ -54,12 +55,25 @@ void func_BG(int argc, char *argv[]){
     }
 
     char path[PATH_MAX];
-    snprintf(path, sizeof(path), "./%s", argv[1]); // add ./ to start of path
-    printf("path: %s\n", path);
+    char fullpath[PATH_MAX];
+
+    // check if path starts with / or .
+    if (argv[1][0] == '/' || argv[1][0] == '.') {
+        snprintf(path, sizeof(path), "%s", argv[1]);
+    } else {
+        snprintf(path, sizeof(path), "./%s", argv[1]); // add ./ to start of path
+    }
     
-    //printf("argc: %d\nargv[0]: %s\nargv[1]: %s\n", argc, argv[0], argv[1]);
+    if (realpath(path, fullpath) == NULL) {
+        perror("realpath");
+        return;
+    }
+    printf("path: %s\n", path);
+    printf("fullpath: %s\n", fullpath);
+
     char* args[argc];
     for (int i = 0; i < argc; i++) {
+        // fill with NULL
         args[i] = NULL;
     }
     // copy argv minus bg
@@ -68,52 +82,35 @@ void func_BG(int argc, char *argv[]){
         printf("args[%d]: %s\n", i, args[i]);
     }
 
-
-    if (access(path, F_OK) != 0) {
+    if (access(fullpath, F_OK) != 0) {
         // check if path is valid
         printf("invalid program path\n");
         return;
     }
 
-    // if (realpath(path, args)) {
-    //     perror("realpath");
-    //     exit(1);
-    // }
-
     pid_t pid = fork();
     if (pid == 0) {
         // exec program if fork is child
-
-        //char *args[]={argv[1], NULL};
-        //char path[PATH_MAX];
-        
-        //char *args[] = {argv[1], path, NULL};
-        execvp(path, args);
+        execvp(fullpath, args);
         perror("execvp");
         exit(1);
     } else {
         int status;
         pid_t result = waitpid(pid, &status, WNOHANG); // check if child exists
         if (result == 0) {
-            printf("pid child: %d\n", pid);
-            head = add_newNode(head, pid, argv[1]);
+            printf("child pid: %d\n", pid);
+            head = add_newNode(head, pid, fullpath);
         } else {
             printf("no child\n");
         }
-        // if (PifExist(head, pid)) {
-        //     head = add_newNode(head, pid, argv[1]);
-        // } else {
-        //     printf("pid %d already exists\n", (int)pid);
-        // }
-    }    
+        sleep(1);
+    }
 }
-
 
 void func_BGlist(int argc, char* argv[]){
-    printf("printing list:\n");
 	printList(head);
+    printf("total background jobs: %d\n", listSize(head));
 }
-
 
 void func_BGkill(int argc, char* argv[]){
     if (argc != 2) {
@@ -140,7 +137,6 @@ void func_BGkill(int argc, char* argv[]){
     }
 }
 
-
 void func_BGstop(int argc, char* argv[]){
 	if (argc != 2) {
         printf("usage: bgstop <pid>");
@@ -161,7 +157,6 @@ void func_BGstop(int argc, char* argv[]){
         printf("%d error", val);
     }
 }
-
 
 void func_BGstart(int argc, char* argv[]){
 	if (argc != 2) {
@@ -184,13 +179,11 @@ void func_BGstart(int argc, char* argv[]){
     }
 }
 
-
 void func_pstat(int argc, char* argv[]){
 	//Your code here
     printf("func_pstat\n");
     printList(head);
 }
-
  
 int main(){
     char line[50];
