@@ -10,13 +10,16 @@
 #include <unistd.h>
 #include "linked_list.h"
 
-#define MAXTOK 50
-#define PATH_MAX 100
+#define MAXTOK 64
+#define PATH_MAX 128
+#define LINE_MAX 128
+#define NAME_MAX 64
 
 Node* head = NULL;
 
 int parse(char *line, char *argv[], int max) {
     // parse terminal input as array of arguments
+    // returns number of arguments
 
     int argc = 0;
     char *tok = strtok(line, " \t\n");
@@ -30,6 +33,7 @@ int parse(char *line, char *argv[], int max) {
 
 pid_t convert_pid(char* input) {
     // converts string to pid
+    // returns pid, or -1 if failed
 
     char *endptr;
     errno = 0;
@@ -64,7 +68,7 @@ void func_BG(int argc, char *argv[]){
         snprintf(path, sizeof(path), "./%s", argv[1]); // add ./ to start of path
     }
     
-    if (realpath(path, fullpath) == NULL) {
+    if (realpath(path, fullpath) == NULL) {            // get full path 
         perror("realpath");
         return;
     }
@@ -72,18 +76,16 @@ void func_BG(int argc, char *argv[]){
     printf("fullpath: %s\n", fullpath);
 
     char* args[argc];
-    for (int i = 0; i < argc; i++) {
-        // fill with NULL
-        args[i] = NULL;
-    }
+    
     // copy argv minus bg
     for (int i = 0; i < argc - 1; i++) {
         args[i] = argv[i+1];
         printf("args[%d]: %s\n", i, args[i]);
     }
-
+    args[argc-1] = NULL;                               // end argument array with null
+    
+    // check if path is valid
     if (access(fullpath, F_OK) != 0) {
-        // check if path is valid
         printf("invalid program path\n");
         return;
     }
@@ -95,15 +97,15 @@ void func_BG(int argc, char *argv[]){
         perror("execvp");
         exit(1);
     } else {
+        sleep(1);
         int status;
         pid_t result = waitpid(pid, &status, WNOHANG); // check if child exists
         if (result == 0) {
             printf("child pid: %d\n", pid);
             head = add_newNode(head, pid, fullpath);
         } else {
-            printf("no child\n");
+            printf("status %d, child terminated\n", status);
         }
-        sleep(1);
     }
 }
 
@@ -126,6 +128,7 @@ void func_BGkill(int argc, char* argv[]){
 
     if (PifExist(head, pid) == 0) {
         printf("pid does not exist\n");
+        return;
     }
 
     int val = kill(pid, SIGTERM);
@@ -139,7 +142,8 @@ void func_BGkill(int argc, char* argv[]){
 
 void func_BGstop(int argc, char* argv[]){
 	if (argc != 2) {
-        printf("usage: bgstop <pid>");
+        printf("usage: bgstop <pid>\n");
+        return;
     }
     pid_t pid = convert_pid(argv[1]);
     if (pid < 0) {
@@ -148,6 +152,7 @@ void func_BGstop(int argc, char* argv[]){
     }
     if (PifExist(head, pid) == 0) {
         printf("pid does not exist\n");
+        return;
     }
     
     int val = kill(pid, SIGSTOP);
@@ -160,7 +165,8 @@ void func_BGstop(int argc, char* argv[]){
 
 void func_BGstart(int argc, char* argv[]){
 	if (argc != 2) {
-        printf("usage: bgstart <pid>");
+        printf("usage: bgstart <pid>\n");
+        return;
     }
     pid_t pid = convert_pid(argv[1]);
     if (pid < 0) {
@@ -169,6 +175,7 @@ void func_BGstart(int argc, char* argv[]){
     }
     if (PifExist(head, pid) == 0) {
         printf("pid does not exist\n");
+        return;
     }
     
     int val = kill(pid, SIGCONT);
@@ -179,17 +186,90 @@ void func_BGstart(int argc, char* argv[]){
     }
 }
 
+int read_stat(  
+    pid_t pid, 
+    char comm[NAME_MAX], 
+    char *state, 
+    unsigned long long *utime, 
+    unsigned long long *stime, 
+    long *rss
+) {
+    // reads pid, comm, state, utime, and stime from /proc/<pid>/stat
+    // returns 0 if success, -1 if fail
+
+    char path[PATH_MAX];
+    snprintf(path, sizeof(path), "/proc/%d/stat", pid);
+
+    FILE *f = fopen(path, "r");
+    if (!f) {
+        return -1;
+    } 
+
+    int n = fscanf( 
+        f,
+        // "%*d"                                          // 1 skip
+        // "%255s %c"                                     // 2 comm, 3 state
+        // "%*d %*d %*d %*d %*d %*u %*lu %*lu %*lu %*lu"  // 4-13 skip
+        // "%llu %llu"                                    // 14 utime, 15 stime
+        // "%*ld %*ld %*ld %*ld %*ld %*ld %*llu %*lu"     // 16-23 skip
+        // "%ld",                                         // 24 rss
+        "%*s"                                          // 1 skip
+        "%255s %c"                                     // 2 comm, 3 state
+        "%*s %*s %*s %*s %*s %*s %*s %*s %*s %*s"      // 4-13 skip
+        "%llu %llu"                                    // 14 utime, 15 stime
+        "%*s %*s %*s %*s %*s %*s %*s %*s"              // 16-23 skip
+        "%ld",                                         // 24 rss
+        comm, state, utime, stime, rss
+    );
+    fclose(f);
+    if (n == 5) {                                      // check if there are 5 values
+        return 0;
+    } else {
+        return -1;
+    }
+}
+
 void func_pstat(int argc, char* argv[]){
-	//Your code here
-    printf("func_pstat\n");
-    printList(head);
+	if (argc != 2) {
+        printf("usage: pstat <pid>\n");
+        return;
+    }
+    pid_t pid = convert_pid(argv[1]);
+    if (pid < 0) {
+        // invalid pid
+        return;
+    }
+    if (PifExist(head, pid) == 0) {
+        printf("pid does not exist\n");
+        return;
+    }
+
+    char comm[NAME_MAX];
+    char state;
+    unsigned long long utime;
+    unsigned long long stime;
+    long rss;
+
+    if (read_stat(pid, comm, &state, &utime, &stime, &rss) != 0) {
+        perror("read_stat");
+        return;
+    }
+
+    printf("1. comm  : %s\n", comm);
+    printf("2. state : %c\n", state);
+    printf("3. utime : %lf\n", utime / (double)sysconf(_SC_CLK_TCK));
+    printf("4. stime : %lf\n", stime / (double)sysconf(_SC_CLK_TCK));
+    printf("5 rss    : %ld\n", rss);
+
 }
  
 int main(){
-    char line[50];
+    char line[LINE_MAX];
     while (1) {
         printf("Pman: > ");
-        if (!fgets(line, sizeof(line), stdin)) break;
+        if (!fgets(line, sizeof(line), stdin)) {       // read terminal input        
+            break;
+        } 
 
         char *argv[MAXTOK];
         int argc = parse(line, argv, MAXTOK);

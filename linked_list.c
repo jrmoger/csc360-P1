@@ -95,6 +95,8 @@ void printList(Node *node){
 }
 
 int listSize(Node *node) {
+	// get size of list
+
 	Node *cur = node;
 	int count = 0;
 	while (cur != NULL) {
