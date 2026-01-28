@@ -72,15 +72,15 @@ void func_BG(int argc, char *argv[]){
         perror("realpath");
         return;
     }
-    printf("path: %s\n", path);
-    printf("fullpath: %s\n", fullpath);
+    // printf("path: %s\n", path);
+    // printf("fullpath: %s\n", fullpath);
 
     char* args[argc];
     
     // copy argv minus bg
     for (int i = 0; i < argc - 1; i++) {
         args[i] = argv[i+1];
-        printf("args[%d]: %s\n", i, args[i]);
+        // printf("args[%d]: %s\n", i, args[i]);
     }
     args[argc-1] = NULL;                               // end argument array with null
     
@@ -104,7 +104,7 @@ void func_BG(int argc, char *argv[]){
             printf("child pid: %d\n", pid);
             head = add_newNode(head, pid, fullpath);
         } else {
-            printf("status %d, child terminated\n", status);
+            printf("status %d, child %d terminated\n", status, pid);
         }
     }
 }
@@ -134,7 +134,7 @@ void func_BGkill(int argc, char* argv[]){
     int val = kill(pid, SIGTERM);
     if (val == 0) {
         head = deleteNode(head, pid);
-        printf("successfully killed process %d\n", pid);
+        printf("sent TERM signal to program %d\n", pid);
     } else {
         printf("%d error", val);
     }
@@ -157,7 +157,7 @@ void func_BGstop(int argc, char* argv[]){
     
     int val = kill(pid, SIGSTOP);
     if (val == 0) {
-        printf("successfully stopped process %d\n", pid);
+        printf("sent STOP signal to program %d\n", pid);
     } else {
         printf("%d error", val);
     }
@@ -180,7 +180,7 @@ void func_BGstart(int argc, char* argv[]){
     
     int val = kill(pid, SIGCONT);
     if (val == 0) {
-        printf("successfully started process %d\n", pid);
+        printf("sent CONT signal to program %d\n", pid);
     } else {
         printf("%d error", val);
     }
@@ -207,12 +207,6 @@ int read_stat(
 
     int n = fscanf( 
         f,
-        // "%*d"                                          // 1 skip
-        // "%255s %c"                                     // 2 comm, 3 state
-        // "%*d %*d %*d %*d %*d %*u %*lu %*lu %*lu %*lu"  // 4-13 skip
-        // "%llu %llu"                                    // 14 utime, 15 stime
-        // "%*ld %*ld %*ld %*ld %*ld %*ld %*llu %*lu"     // 16-23 skip
-        // "%ld",                                         // 24 rss
         "%*s"                                          // 1 skip
         "%255s %c"                                     // 2 comm, 3 state
         "%*s %*s %*s %*s %*s %*s %*s %*s %*s %*s"      // 4-13 skip
@@ -239,7 +233,7 @@ void func_pstat(int argc, char* argv[]){
         // invalid pid
         return;
     }
-    if (PifExist(head, pid) == 0) {
+    if (kill(pid, 0) != 0) {                           // check if pid exists
         printf("pid does not exist\n");
         return;
     }
@@ -257,8 +251,8 @@ void func_pstat(int argc, char* argv[]){
 
     printf("1. comm  : %s\n", comm);
     printf("2. state : %c\n", state);
-    printf("3. utime : %lf\n", utime / (double)sysconf(_SC_CLK_TCK));
-    printf("4. stime : %lf\n", stime / (double)sysconf(_SC_CLK_TCK));
+    printf("3. utime : %Lf\n", utime / (long double)sysconf(_SC_CLK_TCK));
+    printf("4. stime : %Lf\n", stime / (long double)sysconf(_SC_CLK_TCK));
     printf("5 rss    : %ld\n", rss);
 
 }
