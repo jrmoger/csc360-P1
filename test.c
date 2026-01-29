@@ -16,7 +16,7 @@ int main() {
         // printf("%d\n", c);
         // sleep(5);
         int status;
-        int value = waitpid(-1, &status, WNOHANG); // system call to increase stime
+        waitpid(-1, &status, WNOHANG); // system call to increase stime
     }
     return 0;
 }

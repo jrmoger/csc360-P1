@@ -69,7 +69,8 @@ void func_BG(int argc, char *argv[]){
     }
     
     if (realpath(path, fullpath) == NULL) {            // get full path 
-        perror("realpath");
+        // perror("realpath");
+        printf("invalid program path\n");
         return;
     }
     // printf("path: %s\n", path);
@@ -195,10 +196,10 @@ int read_stat(
     long *rss
 ) {
     // reads pid, comm, state, utime, and stime from /proc/<pid>/stat
-    // returns 0 if success, -1 if fail
+    // returns 0 on success, -1 if fail
 
     char path[PATH_MAX];
-    snprintf(path, sizeof(path), "/proc/%d/stat", pid);
+    snprintf(path, sizeof(path), "/proc/%d/stat", (int)pid);
 
     FILE *f = fopen(path, "r");
     if (!f) {
@@ -221,6 +222,36 @@ int read_stat(
     } else {
         return -1;
     }
+}
+
+int read_status(pid_t pid, long *voluntary, long *nonvoluntary) {
+    // reads voluntary_ctxt_switches and nonvoluntary_ctxt_switches from proc/<pid>/stat
+    // returns 0 on success, -1 on failure
+
+    char path[PATH_MAX];
+    snprintf(path, sizeof(path), "/proc/%d/status", (int)pid);
+
+    FILE *f = fopen(path, "r");
+    if (!f) {
+        return -1;
+    }
+
+    char line[512];
+    while (fgets(line, sizeof(line), f)) {
+        // lines are like:
+        // "voluntary_ctxt_switches:\t123\n"
+        // "nonvoluntary_ctxt_switches:\t123\n"
+        if (strncmp(line, "voluntary_ctxt_switches:", 24) == 0) {
+            long v;
+            if (sscanf(line + 24, "%ld", &v) == 1) *voluntary = v;
+        } else if (strncmp(line, "nonvoluntary_ctxt_switches:", 27) == 0) {
+            long nv;
+            if (sscanf(line + 27, "%ld", &nv) == 1) *nonvoluntary = nv;
+        }
+    }
+    fclose(f);
+    if (voluntary < 0 || nonvoluntary < 0) return -1;
+    return 0;
 }
 
 void func_pstat(int argc, char* argv[]){
@@ -249,11 +280,21 @@ void func_pstat(int argc, char* argv[]){
         return;
     }
 
+    long v_ctxt;
+    long nv_ctxt;
+
+    if (read_status(pid, &v_ctxt, &nv_ctxt)) {
+        perror("read_status");
+        return;
+    }
+
     printf("1. comm  : %s\n", comm);
     printf("2. state : %c\n", state);
     printf("3. utime : %Lf\n", utime / (long double)sysconf(_SC_CLK_TCK));
     printf("4. stime : %Lf\n", stime / (long double)sysconf(_SC_CLK_TCK));
-    printf("5 rss    : %ld\n", rss);
+    printf("5. rss   : %ld\n", rss);
+    printf("6. voluntary_ctxt_switches    : %ld\n", v_ctxt);
+    printf("7. nonvoluntary_ctxt_switches : %ld\n", nv_ctxt);
 
 }
  
