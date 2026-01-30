@@ -20,7 +20,7 @@
 // 	return p;
 // }
 
-Node * add_newNode(Node* head, pid_t new_pid, char * new_path){
+Node * add_node(Node* head, pid_t new_pid, char * new_path){
 	// initialize a new node
 	Node *new_node = (Node *)malloc(sizeof(Node));
 	if (new_node == NULL) {
@@ -57,7 +57,7 @@ Node * add_newNode(Node* head, pid_t new_pid, char * new_path){
 	return head;
 }
 
-Node * deleteNode(Node* head, pid_t pid){
+Node * delete_node(Node* head, pid_t pid){
 	if (head == NULL) {
 		return NULL;
 	}
@@ -86,7 +86,7 @@ Node * deleteNode(Node* head, pid_t pid){
 	return head;
 }
 
-void printList(Node *node){
+void print_list(Node *node) {
 	Node *cur = node;
 	while (cur != NULL) {
 		printf("%d:\t\t%s\n", (int)cur->pid, cur->path);
@@ -94,7 +94,7 @@ void printList(Node *node){
 	}
 }
 
-int listSize(Node *node) {
+int list_size(Node *node) {
 	// get size of list
 
 	Node *cur = node;
@@ -106,7 +106,8 @@ int listSize(Node *node) {
 	return count;
 }
 
-int PifExist(Node *node, pid_t pid){
+int pid_exists(Node *node, pid_t pid){
+	// check if pid exists in the list
 	Node *cur = node;
 	while (cur != NULL) {
 		if (cur->pid == pid) {

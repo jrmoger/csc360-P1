@@ -1,5 +1,5 @@
 .phony all:
-all: pman test inf
+all: pman test inf args
 
 pman: main.c linked_list.c
 	gcc -Wall main.c linked_list.c -o pman

@@ -12,11 +12,11 @@
 int main() {
     int c = 0;
     while (1) {
-        c++;                                       // increase utime
+        c++;                                           // increase utime
         // printf("%d\n", c);
         // sleep(5);
         int status;
-        waitpid(-1, &status, WNOHANG); // system call to increase stime
+        waitpid(-1, &status, WNOHANG);                 // system call to increase stime
     }
     return 0;
 }

@@ -103,16 +103,11 @@ void func_BG(int argc, char *argv[]){
         pid_t result = waitpid(pid, &status, WNOHANG); // check if child exists
         if (result == 0) {
             printf("child pid: %d\n", pid);
-            head = add_newNode(head, pid, fullpath);
+            head = add_node(head, pid, fullpath);
         } else {
             printf("status %d, child %d terminated\n", status, pid);
         }
     }
-}
-
-void func_BGlist(int argc, char* argv[]){
-	printList(head);
-    printf("total background jobs: %d\n", listSize(head));
 }
 
 void func_BGkill(int argc, char* argv[]){
@@ -127,14 +122,14 @@ void func_BGkill(int argc, char* argv[]){
         return;
     }
 
-    if (PifExist(head, pid) == 0) {
+    if (pid_exists(head, pid) == 0) {
         printf("pid does not exist\n");
         return;
     }
 
     int val = kill(pid, SIGTERM);
     if (val == 0) {
-        head = deleteNode(head, pid);
+        head = delete_node(head, pid);
         printf("sent TERM signal to program %d\n", pid);
     } else {
         printf("%d error", val);
@@ -151,7 +146,7 @@ void func_BGstop(int argc, char* argv[]){
         // invalid pid
         return;
     }
-    if (PifExist(head, pid) == 0) {
+    if (pid_exists(head, pid) == 0) {
         printf("pid does not exist\n");
         return;
     }
@@ -174,7 +169,7 @@ void func_BGstart(int argc, char* argv[]){
         // invalid pid
         return;
     }
-    if (PifExist(head, pid) == 0) {
+    if (pid_exists(head, pid) == 0) {
         printf("pid does not exist\n");
         return;
     }
@@ -196,7 +191,7 @@ int read_stat(
     long *rss
 ) {
     // reads pid, comm, state, utime, and stime from /proc/<pid>/stat
-    // returns 0 on success, -1 if fail
+    // returns 0 on success, -1 on failure
 
     char path[PATH_MAX];
     snprintf(path, sizeof(path), "/proc/%d/stat", (int)pid);
@@ -221,6 +216,45 @@ int read_stat(
         return 0;
     } else {
         return -1;
+    }
+}
+
+char get_state(pid_t pid) {
+    // get state char of input pid
+    // return \0 if pid doesn't exist or failed to read /proc
+
+    char comm[NAME_MAX];
+    char state;
+    unsigned long long utime;
+    unsigned long long stime;
+    long rss;
+    if (read_stat(pid, comm, &state, &utime, &stime, &rss) != 0) {
+        return '\0';
+    }
+
+    return state;
+}
+
+void remove_terminated(Node *node) {
+	// checks list for any terminated processes and remove them
+	Node *cur = node;
+    int size = list_size(node);
+    pid_t to_delete[size];
+    int i = 0;
+	while (cur != NULL) {
+        to_delete[i] = -1;
+		if (get_state(cur->pid) == 'Z' || get_state(cur->pid) == '\0') {                           // check if pid exists
+        	// pid_t cur_pid = cur->pid;
+            to_delete[i] = cur->pid;
+		}
+		cur = cur->next;
+        i++;
+	}
+    for (int j = 0; j < size; j++) {
+        if (to_delete[j] != -1) {
+            printf("removed program %d from list\n", to_delete[j]);
+            head = delete_node(node, to_delete[j]);
+        }
     }
 }
 
@@ -290,14 +324,21 @@ void func_pstat(int argc, char* argv[]){
 
     printf("1. comm  : %s\n", comm);
     printf("2. state : %c\n", state);
-    printf("3. utime : %Lf\n", utime / (long double)sysconf(_SC_CLK_TCK));
-    printf("4. stime : %Lf\n", stime / (long double)sysconf(_SC_CLK_TCK));
+    printf("3. utime : %Lf\n", utime/(long double)sysconf(_SC_CLK_TCK));
+    printf("4. stime : %Lf\n", stime/(long double)sysconf(_SC_CLK_TCK));
     printf("5. rss   : %ld\n", rss);
     printf("6. voluntary_ctxt_switches    : %ld\n", v_ctxt);
     printf("7. nonvoluntary_ctxt_switches : %ld\n", nv_ctxt);
 
 }
- 
+
+
+void func_BGlist(int argc, char* argv[]){
+    remove_terminated(head);
+	print_list(head);
+    printf("total background jobs: %d\n", list_size(head));
+}
+
 int main(){
     char line[LINE_MAX];
     while (1) {
